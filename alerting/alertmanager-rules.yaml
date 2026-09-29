@@ -1,0 +1,30 @@
+apiVersion: ://coreos.com
+kind: PrometheusRule
+metadata:
+  name: platform-alert-rules
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+  - name: cluster-telemetry-alerts
+    rules:
+    - alert: KubernetesPodCrashLooping
+      expr: rate(kube_pod_container_status_restarts_total[5m]) * 60 > 2
+      for: 2m
+      labels:
+        severity: critical
+        tier: platform
+      annotations:
+        summary: "Pod {{ $labels.pod }} is crash looping"
+        description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has restarted more than twice within the last 5 minutes."
+
+    - alert: HighMemoryUtilization
+      expr: sum(container_memory_working_set_bytes{container!=""}) BY (pod, namespace) / sum(kube_pod_container_resource_limits{resource="memory"}) BY (pod, namespace) * 100 > 85
+      for: 5m
+      labels:
+        severity: warning
+        tier: application
+      annotations:
+        summary: "High Memory usage on Pod {{ $labels.pod }}"
+        description: "Pod {{ $labels.pod }} memory usage is currently above 85% of its set allocation limit."
